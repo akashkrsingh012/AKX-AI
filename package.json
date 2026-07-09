@@ -7,9 +7,9 @@
     "install:all": "npm install --prefix backend/gateway && npm install --prefix backend/services/auth && npm install --prefix backend/services/chat && npm install --prefix backend/services/agent && npm install --prefix backend/services/billing && npm install --prefix frontend",
     "dev": "node start-all.js",
     "build": "npm install --prefix frontend && npm run build --prefix frontend",
-    "build:gateway": "npm install --prefix backend/gateway && npm install --prefix frontend && npm run build --prefix frontend",
-    "build:prod": "npm install --prefix backend/gateway && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "NODE_ENV=production node backend/gateway/index.js",
+    "build:gateway": "npm run install:all && npm run build --prefix frontend",
+    "build:prod": "npm run install:all && npm run build --prefix frontend",
+    "start": "node start-prod.js",
     "lint": "npm run lint --prefix frontend",
     "preview": "npm run build && npm run start"
   }
