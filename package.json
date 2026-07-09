@@ -12,5 +12,9 @@
     "start": "node start-prod.js",
     "lint": "npm run lint --prefix frontend",
     "preview": "npm run build && npm run start"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "dotenv": "^17.4.2"
   }
 }
