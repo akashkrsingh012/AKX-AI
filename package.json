@@ -8,6 +8,7 @@
     "dev": "node start-all.js",
     "build": "npm install --prefix frontend && npm run build --prefix frontend",
     "build:gateway": "npm install --prefix backend/gateway",
+    "build:prod": "npm install --prefix backend/gateway && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "NODE_ENV=production node backend/gateway/index.js",
     "lint": "npm run lint --prefix frontend",
     "preview": "npm run build && npm run start"
