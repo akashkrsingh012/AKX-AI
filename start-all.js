@@ -4,12 +4,10 @@ const path = require("path");
 const frontendPort = process.env.FRONTEND_PORT || process.env.VITE_PORT || 3000;
 const APP_URL = process.env.APP_URL || `http://localhost:${frontendPort}`;
 
+// Single unified server — auth service mounts all routes (chat, agent, billing).
+// No gateway needed.
 const backendServices = [
-  { name: "Gateway", dir: "backend/gateway", command: "npm", args: ["run", "dev"], delay: 0 },
-  { name: "Auth Service", dir: "backend/services/auth", command: "npm", args: ["run", "dev"], delay: 800 },
-  { name: "Chat Service", dir: "backend/services/chat", command: "npm", args: ["run", "dev"], delay: 800 },
-  { name: "Agent Service", dir: "backend/services/agent", command: "npm", args: ["run", "dev"], delay: 800 },
-  { name: "Billing Service", dir: "backend/services/billing", command: "npm", args: ["run", "dev"], delay: 800 },
+  { name: "Server", dir: "backend/services/auth", command: "npm", args: ["run", "dev"], delay: 0 },
 ];
 
 const frontendService = {

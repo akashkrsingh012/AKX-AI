@@ -6,18 +6,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const uploadLocal = async (buffer, fileName) => {
   try {
-    // Navigate from backend/services/agent/utils to backend/gateway/uploads
-    const uploadDir = path.resolve(__dirname, "../../../gateway/uploads");
-    
+    // Store uploads in the agent service's own uploads folder.
+    // The unified server serves this via /uploads static route.
+    const uploadDir = path.resolve(__dirname, "../uploads");
+
     // Ensure the directory exists
     await fs.mkdir(uploadDir, { recursive: true });
-    
+
     const filePath = path.join(uploadDir, fileName);
-    
+
     // Write the file
     await fs.writeFile(filePath, buffer);
-    
-    // Relative URL works through the Vite dev proxy and production gateway.
+
+    // Relative URL served via /uploads static route on the unified server
     return `/uploads/${fileName}`;
   } catch (error) {
     console.error("Local Upload Error:", error);

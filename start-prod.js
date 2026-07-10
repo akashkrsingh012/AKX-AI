@@ -1,12 +1,10 @@
 const { spawn } = require("child_process");
 const path = require("path");
 
-const backendServices = [
-  { name: "Gateway", dir: "backend/gateway", command: "node", args: ["index.js"], delay: 0 },
-  { name: "Auth Service", dir: "backend/services/auth", command: "node", args: ["index.js"], delay: 500 },
-  { name: "Chat Service", dir: "backend/services/chat", command: "node", args: ["index.js"], delay: 500 },
-  { name: "Agent Service", dir: "backend/services/agent", command: "node", args: ["index.js"], delay: 500 },
-  { name: "Billing Service", dir: "backend/services/billing", command: "node", args: ["index.js"], delay: 500 },
+// Single unified server — no gateway needed.
+// Auth service now mounts all routes (auth, chat, agent, billing) in one process.
+const services = [
+  { name: "Server", dir: "backend/services/auth", command: "node", args: ["index.js"], delay: 0 },
 ];
 
 const children = [];
@@ -51,14 +49,14 @@ function startService(service) {
   });
 }
 
-console.log("Starting AKX AI Production Backend Services...");
+console.log("Starting AKX AI Production Server...");
 
-backendServices.forEach((service) => {
+services.forEach((service) => {
   setTimeout(() => startService(service), service.delay);
 });
 
 process.on("SIGINT", () => {
-  console.log("\n[System] Shutting down all processes...");
+  console.log("\n[System] Shutting down...");
   children.forEach(({ name, process: child }) => {
     console.log(`[System] Killing ${name}...`);
     child.kill("SIGINT");

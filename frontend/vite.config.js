@@ -8,7 +8,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
-  const gatewayUrl = env.VITE_GATEWAY_URL || "http://localhost:8000";
+  // In dev, the unified server runs on 8001 (auth service port).
+  // In prod, VITE_SERVER_URL is set to the Render backend URL.
+  const backendUrl = env.VITE_SERVER_URL || "http://localhost:8001";
 
   const devPort = parseInt(env.VITE_PORT || "3000", 10);
 
@@ -20,12 +22,12 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         "/api": {
-          target: gatewayUrl,
+          target: backendUrl,
           changeOrigin: true,
           secure: false,
         },
         "/uploads": {
-          target: gatewayUrl,
+          target: backendUrl,
           changeOrigin: true,
           secure: false,
         },
@@ -36,7 +38,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         "/api": {
-          target: gatewayUrl,
+          target: backendUrl,
           changeOrigin: true,
         },
       },
