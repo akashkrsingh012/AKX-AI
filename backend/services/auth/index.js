@@ -6,7 +6,13 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
+
+// Import DB connections from all services to ensure each service's Mongoose instance is connected
 import connectDB from "./config/db.js";
+import connectChatDB from "../chat/config/db.js";
+import connectAgentDB from "../agent/config/db.js";
+import connectBillingDB from "../billing/config/db.js";
+
 import dotenv from "dotenv";
 import authRouter from "./routes/auth.routes.js";
 import { protect } from "./middleware/auth.middleware.js";
@@ -107,7 +113,13 @@ app.use((err, req, res, _next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 async function startServer() {
-  await connectDB();
+  // Connect all DB instances
+  await Promise.all([
+    connectDB(),
+    connectChatDB(),
+    connectAgentDB(),
+    connectBillingDB()
+  ]);
   app.listen(port, () => {
     console.log(`Cortex AI server running on port ${port}`);
   });
