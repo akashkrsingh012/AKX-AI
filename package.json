@@ -4,7 +4,7 @@
   "private": true,
   "description": "AKX AI — unified full-stack AI chat application",
   "scripts": {
-    "install:all": "npm install --prefix backend/gateway && npm install --prefix backend/services/auth && npm install --prefix backend/services/chat && npm install --prefix backend/services/agent && npm install --prefix backend/services/billing && npm install --prefix frontend",
+    "install:all": "npm install --prefix backend && npm install --prefix backend/gateway && npm install --prefix backend/services/auth && npm install --prefix backend/services/chat && npm install --prefix backend/services/agent && npm install --prefix backend/services/billing && npm install --prefix frontend",
     "dev": "node start-all.js",
     "build": "npm install --prefix frontend && npm run build --prefix frontend",
     "build:gateway": "npm run install:all && npm run build --prefix frontend",
