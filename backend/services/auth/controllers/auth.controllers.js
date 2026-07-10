@@ -1,14 +1,6 @@
 import bcrypt from "bcryptjs";
 import User from "../models/user.model.js";
 import { createUserSession, sanitizeUser } from "../utils/session.js";
-import {
-  generateOtp,
-  storeOtp,
-  verifyOtp,
-  isOtpVerified,
-  clearOtpVerification,
-  deliverOtp,
-} from "../utils/otp.js";
 import { decodeSocialToken } from "../utils/firebase.js";
 import { parseIdentifier, findUserByIdentifier } from "../utils/identifier.js";
 import { validatePassword } from "../utils/password.js";
@@ -61,83 +53,6 @@ async function handleSocialAuth(decoded, res, extraDetails = {}) {
   });
 }
 
-export const sendOtp = async (req, res) => {
-  try {
-    const { identifier, email, phone } = req.body;
-    const raw = identifier || email || phone;
-    const parsed = parseIdentifier(raw);
-
-    if (!parsed.valid) {
-      return res.status(400).json({ success: false, message: parsed.message });
-    }
-
-    const otp = generateOtp();
-    await storeOtp(parsed.key, otp);
-    await deliverOtp(parsed.key, otp);
-
-    return res.json({
-      success: true,
-      message: `OTP sent successfully via ${parsed.type === "email" ? "email" : "SMS"}`,
-      identifier: parsed.value,
-      identifierType: parsed.type,
-      expiresIn: 300,
-    });
-  } catch (error) {
-    logApiError("sendOtp", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const verifyOtpCode = async (req, res) => {
-  try {
-    const { identifier, email, phone, otp, purpose } = req.body;
-    const raw = identifier || email || phone;
-    const parsed = parseIdentifier(raw);
-
-    if (!parsed.valid) {
-      return res.status(400).json({ success: false, message: parsed.message });
-    }
-    if (!otp || String(otp).length !== 6) {
-      return res.status(400).json({ success: false, message: "OTP must be 6 digits" });
-    }
-
-    const valid = await verifyOtp(parsed.key, String(otp));
-    if (!valid) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
-    }
-
-    const user = await findUserByIdentifier(User, parsed.key);
-    const hasPassword = Boolean(user?.passwordSet);
-
-    if (purpose === "social" && user && hasPassword) {
-      await clearOtpVerification(parsed.key);
-      await createUserSession(user, res);
-      return res.json({
-        success: true,
-        message: "Login successful",
-        identifier: parsed.value,
-        identifierType: parsed.type,
-        isNewUser: false,
-        hasPassword: true,
-        step: "dashboard",
-        user: sanitizeUser(user),
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: "OTP verified",
-      identifier: parsed.value,
-      identifierType: parsed.type,
-      isNewUser: !user,
-      hasPassword,
-    });
-  } catch (error) {
-    logApiError("verifyOtpCode", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 export const googleAuth = async (req, res) => {
   try {
     const { token, fullName, username, email } = req.body;
@@ -177,68 +92,6 @@ export const appleAuth = async (req, res) => {
   } catch (error) {
     logApiError("appleAuth", error);
     return res.status(401).json({ success: false, message: error.message });
-  }
-};
-
-export const setPassword = async (req, res) => {
-  try {
-    const { identifier, email, phone, password, name } = req.body;
-    const raw = identifier || email || phone;
-    const parsed = parseIdentifier(raw);
-
-    if (!parsed.valid) {
-      return res.status(400).json({ success: false, message: parsed.message });
-    }
-
-    const passwordCheck = validatePassword(password);
-    if (!passwordCheck.valid) {
-      return res.status(400).json({ success: false, message: passwordCheck.message });
-    }
-
-    const verified = await isOtpVerified(parsed.key);
-    if (!verified) {
-      return res.status(400).json({ success: false, message: "Please verify OTP first" });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    let user = await findUserByIdentifier(User, parsed.key);
-
-    if (user) {
-      if (user.passwordSet) {
-        return res.status(400).json({
-          success: false,
-          message: "Account already has a password. Please login.",
-        });
-      }
-      user.passwordHash = passwordHash;
-      user.passwordSet = true;
-      if (name && !user.name) user.name = name;
-      await user.save();
-    } else {
-      const userData = {
-        name: name || (parsed.type === "email" ? parsed.value.split("@")[0] : "User"),
-        provider: parsed.type === "email" ? "email" : "phone",
-        passwordHash,
-        passwordSet: true,
-      };
-      if (parsed.type === "email") userData.email = parsed.value;
-      else userData.phone = parsed.value;
-
-      user = await User.create(userData);
-    }
-
-    await clearOtpVerification(parsed.key);
-    await createUserSession(user, res);
-
-    return res.json({
-      success: true,
-      message: "Account created successfully",
-      user: sanitizeUser(user),
-      token: true,
-    });
-  } catch (error) {
-    logApiError("setPassword", error);
-    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -321,86 +174,6 @@ export const loginPassword = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
-  try {
-    const { identifier, email, phone } = req.body;
-    const raw = identifier || email || phone;
-    const parsed = parseIdentifier(raw);
-
-    if (!parsed.valid) {
-      return res.status(400).json({ success: false, message: parsed.message });
-    }
-
-    const user = await findUserByIdentifier(User, parsed.key);
-    if (!user || !user.passwordSet) {
-      return res.status(404).json({
-        success: false,
-        message: "No account found with this email or phone number",
-      });
-    }
-
-    const otp = generateOtp();
-    await storeOtp(parsed.key, otp);
-    await deliverOtp(parsed.key, otp);
-
-    return res.json({
-      success: true,
-      message: "OTP sent for password reset",
-      identifier: parsed.value,
-      identifierType: parsed.type,
-      expiresIn: 300,
-    });
-  } catch (error) {
-    logApiError("forgotPassword", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { identifier, email, phone, otp, password } = req.body;
-    const raw = identifier || email || phone;
-    const parsed = parseIdentifier(raw);
-
-    if (!parsed.valid) {
-      return res.status(400).json({ success: false, message: parsed.message });
-    }
-    if (!otp || String(otp).length !== 6) {
-      return res.status(400).json({ success: false, message: "OTP must be 6 digits" });
-    }
-
-    const passwordCheck = validatePassword(password);
-    if (!passwordCheck.valid) {
-      return res.status(400).json({ success: false, message: passwordCheck.message });
-    }
-
-    const valid = await verifyOtp(parsed.key, String(otp));
-    if (!valid) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
-    }
-
-    const user = await findUserByIdentifier(User, parsed.key);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "Account not found" });
-    }
-
-    user.passwordHash = await bcrypt.hash(password, 12);
-    user.passwordSet = true;
-    await user.save();
-    await clearOtpVerification(parsed.key);
-    await createUserSession(user, res);
-
-    return res.json({
-      success: true,
-      message: "Password reset successfully",
-      user: sanitizeUser(user),
-    });
-  } catch (error) {
-    logApiError("resetPassword", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 export const getMe = async (req, res) => {
   try {
     return res.json({ success: true, user: req.user });
@@ -410,7 +183,7 @@ export const getMe = async (req, res) => {
   }
 };
 
-/** @deprecated Use googleAuth + setPassword/loginPassword instead */
+/** @deprecated Use googleAuth instead */
 export const login = async (req, res) => {
   try {
     const { token } = req.body;
@@ -426,15 +199,6 @@ export const login = async (req, res) => {
         avatar: decoded.picture,
         provider: decoded.firebase?.sign_in_provider,
         passwordSet: false,
-      });
-    }
-
-    if (!user.passwordSet) {
-      return res.status(403).json({
-        success: false,
-        message: "Please complete registration with OTP and password",
-        step: "verify-otp",
-        email: user.email,
       });
     }
 
