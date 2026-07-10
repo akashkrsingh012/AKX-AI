@@ -1,15 +1,15 @@
-import axios from "axios";
+import Message from "../../chat/models/message.model.js";
 
-export const getConversationHistory =
-async(conversationId)=>{
-
- const response =
- await axios.get(
-
- `${process.env.CHAT_SERVICE}/get-messages/${conversationId}`
-
- );
-
- return response.data;
-
+export const getConversationHistory = async (conversationId) => {
+  try {
+    const messages = await Message.find({
+      conversationId: conversationId,
+    }).sort({
+      createdAt: 1,
+    });
+    return messages;
+  } catch (error) {
+    console.error("Failed to get conversation history:", error);
+    throw error;
+  }
 };

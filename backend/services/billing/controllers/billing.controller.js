@@ -159,21 +159,16 @@ export const verifyPayment = async (req, res) => {
 
         await payment.save();
 
-        await axios.patch(
-
-    `${process.env.AUTH_SERVICE}/internal/update-plan`,
-
-    {
-
-        userId: payment.userId,
-
-        plan: payment.plan,
-
-        credits: payment.credits
-
-    }
-
-);
+        // Update user plan and credits directly in the database
+        const User = (await import("../../auth/models/user.model.js")).default;
+        const user = await User.findById(payment.userId);
+        if (user) {
+            user.plan = payment.plan;
+            user.credits += payment.credits;
+            user.totalCredits += payment.credits;
+            user.planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await user.save();
+        }
 
         return res.json({
 

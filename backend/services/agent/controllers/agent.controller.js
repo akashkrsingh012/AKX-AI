@@ -1,7 +1,7 @@
 import { graph } from "../graph/supervisor.graph.js";
 import { addMessage } from "../utils/memory.js";
 import { getAIMode, getConfiguredProviders, getActiveModelName } from "../utils/model.js";
-import axios from "axios";
+import Message from "../../chat/models/message.model.js";
 
 export const chat = async (req, res, next) => {
   try {
@@ -28,7 +28,8 @@ export const chat = async (req, res, next) => {
 
     await addMessage(conversationId, "user", prompt);
 
-    await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
+    // Save user message directly to the database
+    await Message.create({
       conversationId,
       role: "user",
       content: prompt,
@@ -46,7 +47,8 @@ export const chat = async (req, res, next) => {
 
     await addMessage(conversationId, "assistant", answer);
 
-    await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
+    // Save assistant message directly to the database
+    await Message.create({
       conversationId,
       role: "assistant",
       content: answer,
